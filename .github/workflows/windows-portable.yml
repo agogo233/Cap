@@ -103,8 +103,8 @@ jobs:
 
           # First-party executables (same sources as windows-release-signing.ps1 Stage)
           Copy-Item "apps/desktop-gpui/target/$target/release/Cap.exe" $stage
-          Copy-Item "apps/desktop-gpui/binaries/cap-cli-$target.exe" $stage
-          Copy-Item "apps/desktop-gpui/binaries/cap-muxer-$target.exe" $stage
+          Copy-Item "apps/desktop-gpui/binaries/cap-cli-$target.exe" (Join-Path $stage "cap-cli.exe")
+          Copy-Item "apps/desktop-gpui/binaries/cap-muxer-$target.exe" (Join-Path $stage "cap-muxer.exe")
 
           # Bundled DLLs: mirrors gpuiPlatformConfig("win32") in scripts/bundle-gpui.mjs
           Copy-Item "target/ffmpeg/bin/*.dll" $stage
