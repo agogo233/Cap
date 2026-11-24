@@ -644,13 +644,7 @@ pub(crate) fn schedule_startup_check(cx: &mut App) {
     .detach();
 }
 
-pub(crate) fn update_download_policy_changed(policy: UpdateDownloadPolicy, cx: &mut App) {
-    if !cx.has_global::<UpdateScheduler>() {
-        return;
-    }
-    cx.global_mut::<UpdateScheduler>().download_policy = policy;
-    let _ = cx.global::<UpdateScheduler>().wake.try_send(());
-}
+pub(crate) fn update_download_policy_changed(_policy: UpdateDownloadPolicy, _cx: &mut App) {}
 
 fn start_download(release: Release, cx: &mut App) {
     let kind = match installer::update_platform()

@@ -1656,9 +1656,9 @@ impl GeneralSettings {
                 })
                 .unwrap_or_else(default_excluded_windows),
             update_channel: enum_at(general, "updateChannel"),
-            update_download_policy: enum_at(general, "updateDownloadPolicy"),
+            update_download_policy: UpdateDownloadPolicy::Never,
             server_url: string_at(general, "serverUrl", DEFAULT_SERVER_URL),
-            enable_telemetry: bool_at(general, "enableTelemetry", true),
+            enable_telemetry: false,
             editor_preview_quality: EditorPreviewQuality::from_general(general),
             editor_preview_speed: general
                 .get(EDITOR_PREVIEW_SPEED_KEY)
