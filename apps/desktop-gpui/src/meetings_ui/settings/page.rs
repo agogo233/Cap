@@ -1017,7 +1017,11 @@ impl SettingsWindow {
     }
 
     /// A slow computer's model row: the Cap Cloud recommendation's action.
+    /// Hidden while signed out: every cloud action needs an account.
     fn meetings_cloud_action(&self, cx: &mut Context<Self>) -> Option<AnyElement> {
+        if !crate::store::auth_snapshot().signed_in() {
+            return None;
+        }
         let action = shared::cloud_action(self.pages.meetings.cloud)?;
         Some(
             self.button(

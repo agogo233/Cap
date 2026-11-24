@@ -198,11 +198,6 @@ pub fn notes_error_action(error: &NotesError, palette: &Palette) -> Option<AnyEl
             .on_click(move |_, _, cx| {
                 if upgrade {
                     cx.open_url(crate::auth::PRICING_URL);
-                } else {
-                    let sign_in = crate::sign_in::SignIn::global(cx);
-                    sign_in.update(cx, |sign_in, cx| {
-                        sign_in.start(crate::sign_in::SignInOrigin::Settings, cx)
-                    });
                 }
             })
             .into_any_element(),

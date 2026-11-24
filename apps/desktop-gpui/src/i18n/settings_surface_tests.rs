@@ -65,7 +65,6 @@ fn settings_surfaces_match_the_literals_they_replaced() {
             "Click to sign in",
         ),
         (tr::settings::sidebar::signed_in(), "Signed in"),
-        (tr::settings::sidebar::sign_in(), "Sign In"),
         (tr::settings::sidebar::sign_out(), "Sign Out"),
         (tr::settings::sidebar::cancel_sign_in(), "Cancel Sign In"),
         (

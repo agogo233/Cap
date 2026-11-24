@@ -236,10 +236,8 @@ pub(crate) fn submit_reopen() -> bool {
 /// `platform::install_url_scheme_handler`'s AppleEvent handler calls. Safe
 /// from any thread; does no gpui work itself.
 ///
-/// Every URL is first forwarded to the sign-in flow ([`crate::auth`]), whose
-/// slot only exists during an active sign-in and filters for its own
-/// `token`/`api_key` parameters -- the pre-existing behavior of the handler,
-/// unchanged. Action parsing happens on top.
+/// Sign-in forwarding ([`crate::auth::submit_deep_link`]) is a no-op in this
+/// build, so only action parsing happens here.
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 pub fn submit_deep_link(raw: &str) {
     crate::auth::submit_deep_link(raw);

@@ -7514,7 +7514,6 @@ impl MainWindow {
             .p(px(3.))
             .rounded_full()
             .bg(glass_tint(theme, 0.06, 0.09))
-            .child(button(Mode::Instant, "mode-instant", 0))
             .child(button(Mode::Studio, "mode-studio", 1))
             .child(button(Mode::Screenshot, "mode-screenshot", 2))
             // `absolute -left-1.5 -top-2 p-1 rounded-full bg-gray-5`, hanging

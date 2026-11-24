@@ -65,7 +65,7 @@ pub enum ExportDestination {
 }
 
 impl ExportDestination {
-    const ALL: &'static [Self] = &[Self::File, Self::Clipboard, Self::Link];
+    const ALL: &'static [Self] = &[Self::File, Self::Clipboard];
 
     fn label(self) -> &'static str {
         match self {
@@ -94,7 +94,8 @@ impl ExportDestination {
     fn from_slug(slug: &str) -> Self {
         match slug {
             "clipboard" => Self::Clipboard,
-            "link" => Self::Link,
+            // Legacy "link" preferences fall back to File: cloud sharing is
+            // disabled in this build.
             _ => Self::File,
         }
     }
@@ -676,9 +677,14 @@ impl ExportUi {
         }
     }
 
-    /// Every destination change goes through here, so moving between Link
-    /// and File or Clipboard brings up that side's own quality.
+    /// Every destination change goes through here. Link is coerced to File:
+    /// cloud sharing is disabled in this build.
     pub(crate) fn set_destination(&mut self, destination: ExportDestination) {
+        let destination = if destination == ExportDestination::Link {
+            ExportDestination::File
+        } else {
+            destination
+        };
         let is_link = |destination| destination == ExportDestination::Link;
         if is_link(self.destination) != is_link(destination) {
             let leaving = self.quality();
@@ -4828,7 +4834,7 @@ mod tests {
     }
 
     #[test]
-    fn links_default_to_social_and_files_keep_the_saved_quality() {
+    fn links_fall_back_to_file_and_files_keep_the_saved_quality() {
         let saved_before_this_change: ExportPrefs = serde_json::from_str(
             r#"{"format":"Mp4","fps":60,"export_to":"file","resolution":"1080p","compression":"Maximum","custom_bpp":null}"#,
         )
@@ -4839,8 +4845,9 @@ mod tests {
         assert_eq!(exported_bpp(&ui), 0.3);
 
         ui.set_destination(ExportDestination::Link);
-        assert_eq!(shown_quality(&ui), ("Social".into(), None));
-        assert_eq!(exported_bpp(&ui), 0.15);
+        assert_eq!(ui.destination, ExportDestination::File);
+        assert_eq!(shown_quality(&ui), ("Maximum".into(), None));
+        assert_eq!(exported_bpp(&ui), 0.3);
 
         ui.set_destination(ExportDestination::Clipboard);
         assert_eq!(shown_quality(&ui), ("Maximum".into(), None));
@@ -4870,53 +4877,11 @@ mod tests {
             compression: "Web".into(),
             ..prefs()
         });
-        assert_eq!(shown_quality(&opened_on_link), ("Social".into(), None));
+        assert_eq!(opened_on_link.destination, ExportDestination::File);
+        assert_eq!(shown_quality(&opened_on_link), ("Web".into(), None));
         let saved = opened_on_link.preferences();
         assert_eq!(saved.compression, "Web");
-        assert_eq!(saved.link_compression.as_deref(), Some("Social"));
-    }
-
-    #[test]
-    fn a_quality_chosen_on_link_is_kept_for_link_only() {
-        let mut ui = ExportUi::from_preferences(ExportPrefs {
-            export_to: "file".into(),
-            compression: "Maximum".into(),
-            ..prefs()
-        });
-        ui.set_destination(ExportDestination::Link);
-        ui.compression = ExportCompression::Web;
-        ui.custom_bpp = None;
-        ui.set_destination(ExportDestination::File);
-        assert_eq!(shown_quality(&ui), ("Maximum".into(), None));
-        ui.set_destination(ExportDestination::Link);
-        assert_eq!(shown_quality(&ui), ("Web".into(), None));
-
-        ui.custom_bpp = Some(0.12);
-        for export_to in [ExportDestination::Link, ExportDestination::File] {
-            ui.set_destination(export_to);
-            let saved = ui.preferences();
-            assert_eq!(saved.compression, "Maximum");
-            assert_eq!(saved.custom_bpp, None);
-            assert_eq!(saved.link_compression.as_deref(), Some("Web"));
-            assert_eq!(saved.link_custom_bpp, Some(0.12));
-
-            let json = serde_json::to_string(&saved).unwrap();
-            let mut reopened = ExportUi::from_preferences(serde_json::from_str(&json).unwrap());
-            assert_eq!(reopened.destination, export_to);
-            reopened.set_destination(ExportDestination::Link);
-            assert_eq!(shown_quality(&reopened), ("Web".into(), Some(0.12)));
-            assert_eq!(exported_bpp(&reopened), 0.12);
-            reopened.set_destination(ExportDestination::Clipboard);
-            assert_eq!(shown_quality(&reopened), ("Maximum".into(), None));
-            assert_eq!(exported_bpp(&reopened), 0.3);
-        }
-
-        let mut file_choice = ExportUi::from_preferences(prefs());
-        file_choice.compression = ExportCompression::Potato;
-        file_choice.set_destination(ExportDestination::Link);
-        assert_eq!(shown_quality(&file_choice), ("Social".into(), None));
-        file_choice.set_destination(ExportDestination::File);
-        assert_eq!(shown_quality(&file_choice), ("Potato".into(), None));
+        assert_eq!(saved.export_to, "file");
     }
 
     #[test]

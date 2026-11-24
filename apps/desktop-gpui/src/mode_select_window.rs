@@ -312,7 +312,6 @@ impl Render for ModeSelectWindow {
                             .flex_row()
                             .items_stretch()
                             .gap(px(16.))
-                            .child(self.render_card(Mode::Instant, cx))
                             .child(self.render_card(Mode::Studio, cx))
                             .child(self.render_card(Mode::Screenshot, cx)),
                     ),

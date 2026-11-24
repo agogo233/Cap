@@ -950,9 +950,6 @@ impl Overlay {
                     ),
                     cx,
                 );
-                crate::sign_in::SignIn::global(cx).update(cx, |sign_in, cx| {
-                    sign_in.start(crate::sign_in::SignInOrigin::Settings, cx)
-                });
             }
             return;
         }
@@ -1012,11 +1009,6 @@ impl Overlay {
                     Ok(())
                 }
                 Ok(ShareOutcome::SignIn) => {
-                    cx.update(|cx| {
-                        crate::sign_in::SignIn::global(cx).update(cx, |sign_in, cx| {
-                            sign_in.start(crate::sign_in::SignInOrigin::Settings, cx)
-                        });
-                    });
                     Err(tr::editor::export::sign_in_required().to_string())
                 }
                 Ok(ShareOutcome::Upgrade) => {

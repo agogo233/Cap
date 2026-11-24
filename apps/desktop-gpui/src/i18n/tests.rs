@@ -69,7 +69,6 @@ fn english_matches_the_literals_it_replaced() {
         ),
         (tr::menu::about::website(), "Website".into()),
         (tr::menu::about::commit(), "Commit".into()),
-        (tr::menu::help::dashboard(), "Dashboard".into()),
         (tr::menu::help::documentation(), "Documentation".into()),
         (tr::menu::help::faq(), "FAQ".into()),
         (tr::menu::help::self_hosting(), "Self-hosting".into()),

@@ -60,7 +60,6 @@ zoom = "Zoom"
 title = "Help"
 feedback = "Give Feedback…"
 changelog = "Changelog"
-dashboard = "Dashboard"
 documentation = "Documentation"
 faq = "FAQ"
 self_hosting = "Self-hosting"
@@ -286,7 +285,6 @@ downloading_progress = { text = "Downloading v{version}… {percent}%", context 
 installing = { text = "Installing v{version}…", context = "{version} is a version number such as 0.6.2." }
 previous_versions = "View previous versions"
 restart_to_update = { text = "Restart to update to v{version}", context = "{version} is a version number such as 0.6.2." }
-sign_in = { text = "Sign In", max_px = 180, size = 13 }
 sign_out = { text = "Sign Out", max_px = 180, size = 13 }
 signed_in = "Signed in"
 

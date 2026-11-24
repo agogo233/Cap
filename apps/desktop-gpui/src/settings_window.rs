@@ -1932,7 +1932,9 @@ impl SettingsWindow {
                         window.start_window_move();
                     }),
             )
-            .child(self.render_profile(cx))
+            .when(store::auth_snapshot().signed_in(), |this| {
+                this.child(self.render_profile(cx))
+            })
             .child(self.render_nav(cx))
             .child(self.render_account(cx))
     }
@@ -2037,52 +2039,58 @@ impl SettingsWindow {
             .flex_1()
             .min_h_0()
             .overflow_y_scroll()
-            .children(Page::ALL.iter().copied().map(|page| {
-                let selected = page == self.page;
-                div()
-                    .id(SharedString::from(page.slug()))
-                    .when(self.keyboard_nav, ui::keyboard_nav::stop)
-                    .role(gpui::Role::Tab)
-                    .aria_label(page.label())
-                    .aria_selected(selected)
-                    .flex()
-                    .flex_row()
-                    .items_center()
-                    // `.cap-settings-nav-item { height: 32px; padding: 6px;
-                    //  border-radius: 8px }`, `gap-1.5 text-[13px]`.
-                    .h(px(30.))
-                    .px(px(6.))
-                    .gap(px(8.))
-                    .rounded(px(8.))
-                    .text_size(px(13.))
-                    .when(selected, |this| {
-                        this.bg(Theme::with_alpha(
-                            rgb(Theme::SETTINGS_ACCENT),
-                            if theme.is_dark() { 0.22 } else { 0.12 },
-                        ))
-                        .font_weight(FontWeight::MEDIUM)
-                    })
-                    .when(!selected, |this| {
-                        this.hover(|style| style.bg(theme.settings_hover()))
-                    })
-                    .child(
-                        svg()
-                            .path(page.icon())
-                            .size(px(16.))
-                            .flex_shrink_0()
-                            .text_color(if selected {
-                                rgb(Theme::SETTINGS_ACCENT).into()
-                            } else {
-                                theme.settings_muted()
-                            }),
-                    )
-                    .child(page.label())
-                    .on_click(cx.listener(move |this, _, window, cx| {
-                        // Navigating *is* a remount in the Solid router, so the
-                        // new page's query runs -- `set_page` carries that.
-                        this.set_page(page, window, cx);
-                    }))
-            }))
+            .children(
+                Page::ALL
+                    .iter()
+                    .copied()
+                    .filter(|page| !matches!(page, Page::License | Page::Integrations))
+                    .map(|page| {
+                        let selected = page == self.page;
+                        div()
+                            .id(SharedString::from(page.slug()))
+                            .when(self.keyboard_nav, ui::keyboard_nav::stop)
+                            .role(gpui::Role::Tab)
+                            .aria_label(page.label())
+                            .aria_selected(selected)
+                            .flex()
+                            .flex_row()
+                            .items_center()
+                            // `.cap-settings-nav-item { height: 32px; padding: 6px;
+                            //  border-radius: 8px }`, `gap-1.5 text-[13px]`.
+                            .h(px(30.))
+                            .px(px(6.))
+                            .gap(px(8.))
+                            .rounded(px(8.))
+                            .text_size(px(13.))
+                            .when(selected, |this| {
+                                this.bg(Theme::with_alpha(
+                                    rgb(Theme::SETTINGS_ACCENT),
+                                    if theme.is_dark() { 0.22 } else { 0.12 },
+                                ))
+                                .font_weight(FontWeight::MEDIUM)
+                            })
+                            .when(!selected, |this| {
+                                this.hover(|style| style.bg(theme.settings_hover()))
+                            })
+                            .child(
+                                svg()
+                                    .path(page.icon())
+                                    .size(px(16.))
+                                    .flex_shrink_0()
+                                    .text_color(if selected {
+                                        rgb(Theme::SETTINGS_ACCENT).into()
+                                    } else {
+                                        theme.settings_muted()
+                                    }),
+                            )
+                            .child(page.label())
+                            .on_click(cx.listener(move |this, _, window, cx| {
+                                // Navigating *is* a remount in the Solid router, so the
+                                // new page's query runs -- `set_page` carries that.
+                                this.set_page(page, window, cx);
+                            }))
+                    }),
+            )
     }
 
     fn render_account(&self, cx: &mut Context<Self>) -> impl IntoElement {
@@ -2175,28 +2183,27 @@ impl SettingsWindow {
             .border_t_1()
             .border_color(theme.settings_border())
             .child(update_links)
-            .child({
-                let signed_in = store::auth_snapshot().signed_in();
-                let (variant, label) = if SignIn::global(cx).read(cx).is_pending() {
-                    (
-                        ui::ButtonVariant::Gray,
-                        tr::settings::sidebar::cancel_sign_in(),
+            .when(store::auth_snapshot().signed_in(), |this| {
+                this.child({
+                    let (variant, label) = if SignIn::global(cx).read(cx).is_pending() {
+                        (
+                            ui::ButtonVariant::Gray,
+                            tr::settings::sidebar::cancel_sign_in(),
+                        )
+                    } else {
+                        (ui::ButtonVariant::Gray, tr::settings::sidebar::sign_out())
+                    };
+                    self.button(
+                        "settings-sign-in",
+                        (variant, None),
+                        label,
+                        false,
+                        cx,
+                        |this, window, cx| this.toggle_sign_in(window, cx),
                     )
-                } else if signed_in {
-                    (ui::ButtonVariant::Gray, tr::settings::sidebar::sign_out())
-                } else {
-                    (ui::ButtonVariant::Primary, tr::settings::sidebar::sign_in())
-                };
-                self.button(
-                    "settings-sign-in",
-                    (variant, None),
-                    label,
-                    false,
-                    cx,
-                    |this, window, cx| this.toggle_sign_in(window, cx),
-                )
-                .full_width()
-                .height(px(34.))
+                    .full_width()
+                    .height(px(34.))
+                })
             })
     }
 

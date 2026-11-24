@@ -2345,9 +2345,6 @@ impl ScreenshotEditorWindow {
                             window,
                             cx,
                         );
-                        crate::sign_in::SignIn::global(cx).update(cx, |sign_in, cx| {
-                            sign_in.start(crate::sign_in::SignInOrigin::ScreenshotEditor, cx)
-                        });
                     })
                     .ok();
                     return;
