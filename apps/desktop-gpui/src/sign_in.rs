@@ -45,7 +45,8 @@ impl EventEmitter<SignInEvent> for SignIn {}
 
 impl SignIn {
     pub fn init(cx: &mut App) {
-        cx.set_global(SignInGlobal(cx.new(|_| Self)));
+        let entity = cx.new(|_| Self);
+        cx.set_global(SignInGlobal(entity));
     }
 
     pub fn global(cx: &App) -> Entity<Self> {
