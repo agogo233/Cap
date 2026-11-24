@@ -19,7 +19,10 @@ env:
 jobs:
   build:
     name: Build portable zip
-    runs-on: windows-latest
+    # windows-latest's newer SDK trips ffmpeg-sys-next 7.1.3 const asserts
+    # (E0080) under rustc 1.88; windows-2022 is the image upstream's release
+    # pipeline builds the same lockfile on.
+    runs-on: windows-2022
     timeout-minutes: 180
     steps:
       - name: Checkout repository
@@ -58,6 +61,12 @@ jobs:
         run: bun run cap-setup
         env:
           RUST_TARGET_TRIPLE: x86_64-pc-windows-msvc
+
+      # The desktop-gpui workspace patches gpui to ../zed-cap, which only this
+      # script materializes; without it the gpui patch cannot resolve.
+      - name: Prepare gpui dependency
+        shell: bash
+        run: ./scripts/prepare-gpui-dependency.sh
 
       - name: Increase pagefile size
         uses: al-cheb/configure-pagefile-action@a3b6ebd6b634da88790d9c58d4b37a7f4a7b8708 # v1.4
