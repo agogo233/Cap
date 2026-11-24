@@ -18,7 +18,7 @@ env:
 
 jobs:
   build:
-    name: Build portable zip
+    name: Build portable payload
     # windows-latest's newer SDK trips ffmpeg-sys-next 7.1.3 const asserts
     # (E0080) under rustc 1.88; windows-2022 is the image upstream's release
     # pipeline builds the same lockfile on.
@@ -124,68 +124,58 @@ jobs:
             $copied | Copy-Item -Destination $destDir
           }
 
-          $cargo = Get-Content "apps/desktop-gpui/Cargo.toml" -Raw
-          $version = [regex]::Match($cargo, '(?m)^version\s*=\s*"([^"]+)"').Groups[1].Value
-          if (-not $version) { throw "Could not read version from apps/desktop-gpui/Cargo.toml" }
+          "stage=$stage" >> $env:GITHUB_OUTPUT
 
-          $zipName = "Cap-$version-windows-x64-portable.zip"
-          $zipPath = Join-Path $env:RUNNER_TEMP $zipName
-          if (Test-Path $zipPath) { Remove-Item $zipPath -Force }
-          $sevenZip = (Get-Command 7z).Source
-          & $sevenZip a -tzip $zipPath (Join-Path $stage "*") -mx=9 | Out-Host
-          if ($LASTEXITCODE -ne 0) { throw "7z packaging failed." }
-
-          New-Item -ItemType Directory -Path dist -Force | Out-Null
-          Copy-Item $zipPath dist/
-          "zip=dist/$zipName" >> $env:GITHUB_OUTPUT
-          "name=$zipName" >> $env:GITHUB_OUTPUT
-
-      - name: Verify portable zip contents
+      - name: Verify portable payload
         shell: pwsh
         env:
-          ZIP_PATH: ${{ steps.assemble.outputs.zip }}
+          STAGE_PATH: ${{ steps.assemble.outputs.stage }}
         run: |
           $ErrorActionPreference = "Stop"
-          Add-Type -AssemblyName System.IO.Compression.FileSystem
-          $zip = [System.IO.Compression.ZipFile]::OpenRead((Resolve-Path $env:ZIP_PATH))
-          try {
-            $entries = @($zip.Entries | ForEach-Object FullName | Sort-Object -Unique)
-            Write-Host "Zip contains $($entries.Count) entries"
+          $stage = $env:STAGE_PATH
 
-            # Same required list as the "Verify Windows installer contents" gate in desktop-release.yml
-            $required = @(
-              "Cap.exe", "cap-muxer.exe", "cap-cli.exe",
-              "avcodec-61.dll", "avdevice-61.dll", "avfilter-10.dll", "avformat-61.dll",
-              "avutil-59.dll", "postproc-58.dll", "swresample-5.dll", "swscale-8.dll",
-              "dxcompiler.dll", "dxil.dll", "onnxruntime.dll", "onnxruntime_providers_shared.dll",
-              "msvcp140.dll", "msvcp140_1.dll", "vcruntime140.dll", "vcruntime140_1.dll"
-            )
-            $missing = @($required | Where-Object { $_ -notin $entries })
-            if ($missing.Count -gt 0) { throw "Portable zip is missing: $($missing -join ', ')" }
-
-            foreach ($forbidden in @("cap-gpui.exe", "cap-exporter.exe")) {
-              if ($entries -contains $forbidden) { throw "Portable zip unexpectedly bundles '$forbidden'." }
+          # Same required list as the "Verify Windows installer contents" gate in desktop-release.yml
+          $required = @(
+            "Cap.exe", "cap-muxer.exe", "cap-cli.exe",
+            "avcodec-61.dll", "avdevice-61.dll", "avfilter-10.dll", "avformat-61.dll",
+            "avutil-59.dll", "postproc-58.dll", "swresample-5.dll", "swscale-8.dll",
+            "dxcompiler.dll", "dxil.dll", "onnxruntime.dll", "onnxruntime_providers_shared.dll",
+            "msvcp140.dll", "msvcp140_1.dll", "vcruntime140.dll", "vcruntime140_1.dll"
+          )
+          foreach ($file in $required) {
+            if (-not (Test-Path -LiteralPath (Join-Path $stage $file) -PathType Leaf)) {
+              throw "Portable payload is missing '$file'."
             }
+          }
 
-            foreach ($dir in @(
-              "assets/backgrounds/macOS", "assets/backgrounds/blue", "assets/backgrounds/cities",
-              "assets/backgrounds/dark", "assets/backgrounds/orange", "assets/backgrounds/purple",
-              "assets/music", "licenses/dxc", "licenses/nemotron-3-diarization", "licenses/wespeaker-campplus"
-            )) {
-              if (-not ($entries | Where-Object { $_ -like "$dir/*" })) { throw "No files under '$dir'." }
+          foreach ($forbidden in @("cap-gpui.exe", "cap-exporter.exe")) {
+            if (Test-Path -LiteralPath (Join-Path $stage $forbidden)) {
+              throw "Portable payload unexpectedly bundles '$forbidden'."
             }
+          }
 
-            if (@($entries | Where-Object { $_ -match '\.(zip|7z|tar|gz|tgz)$' }).Count -gt 0) {
-              throw "Portable zip must not contain nested archives."
+          foreach ($dir in @(
+            "assets/backgrounds/macOS", "assets/backgrounds/blue", "assets/backgrounds/cities",
+            "assets/backgrounds/dark", "assets/backgrounds/orange", "assets/backgrounds/purple",
+            "assets/music", "licenses/dxc", "licenses/nemotron-3-diarization", "licenses/wespeaker-campplus"
+          )) {
+            if (-not (Get-ChildItem -LiteralPath (Join-Path $stage $dir) -File -ErrorAction SilentlyContinue)) {
+              throw "No files under '$dir'."
             }
-            Write-Host "Portable zip contents verified."
-          } finally { $zip.Dispose() }
+          }
 
-      - name: Upload portable zip artifact
+          $nested = @(Get-ChildItem -Path $stage -Recurse -File | Where-Object { $_.Extension -in @(".zip", ".7z", ".tar", ".gz", ".tgz") })
+          if ($nested.Count -gt 0) {
+            throw "Portable payload must not contain nested archives: $(($nested | ForEach-Object FullName) -join ', ')"
+          }
+
+          $count = (Get-ChildItem -Path $stage -Recurse -File).Count
+          Write-Host "Portable payload verified: $count files."
+
+      - name: Upload portable payload artifact
         uses: actions/upload-artifact@v4
         with:
           name: cap-windows-x64-portable
-          path: ${{ steps.assemble.outputs.zip }}
+          path: ${{ steps.assemble.outputs.stage }}
           retention-days: 7
           if-no-files-found: error
-          compression-level: 0
